@@ -52,5 +52,8 @@ class ToDoTableViewCell: UITableViewCell {
     
     func configure(with model: ItemModel) {
         taskLabel.text = model.title
+        
+        self.accessoryType = model.done ? .checkmark : .none
+        
     }
 }
