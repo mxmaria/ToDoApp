@@ -7,6 +7,7 @@
 
 import UIKit
 import PinLayout
+import CoreData
 
 class ToDoViewController: UIViewController {
     
@@ -14,18 +15,15 @@ class ToDoViewController: UIViewController {
     
     var itemArray = [ItemModel]()
     
-    
+    let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
+
     
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        var newItem = ItemModel()
-        newItem.title = "asd"
-        itemArray.append(newItem)
+        print(FileManager.default.urls(for: .documentDirectory, in: .userDomainMask))
         
-        var newItem2 = ItemModel()
-        newItem2.title = "qweqwe"
-        itemArray.append(newItem2)
+        loadItems()
         
         tableView.delegate = self
         tableView.dataSource = self
@@ -48,15 +46,16 @@ class ToDoViewController: UIViewController {
         super.viewDidLayoutSubviews()
         
         tableView.pin.all()
-        
     }
 }
 
 extension ToDoViewController: UITableViewDelegate, UITableViewDataSource {
     
+    
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         itemArray.count
     }
+    
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         guard let cell = tableView.dequeueReusableCell(withIdentifier: "ToDoTableViewCell", for: indexPath) as? ToDoTableViewCell else {
@@ -68,15 +67,28 @@ extension ToDoViewController: UITableViewDelegate, UITableViewDataSource {
         return cell
     }
     
+    
     func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
         return 60
     }
     
+    
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         
         itemArray[indexPath.row].done = !itemArray[indexPath.row].done
-        tableView.reloadData()
+        saveItems()
     }
+    
+    
+    func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCell.EditingStyle, forRowAt indexPath: IndexPath) {
+        if editingStyle == .delete {
+            context.delete(itemArray[indexPath.row])
+            itemArray.remove(at: indexPath.row)
+            tableView.deleteRows(at: [indexPath], with: .fade)
+            saveItems()
+        }
+    }
+    
     
     @objc
     private func didTapAddButton() {
@@ -85,12 +97,13 @@ extension ToDoViewController: UITableViewDelegate, UITableViewDataSource {
         
         let alert = UIAlertController(title: "Add new task", message: nil, preferredStyle: .alert)
         let action = UIAlertAction(title: "Add", style: .default) { (action) in
-            
-            var newItem = ItemModel()
+                        
+            let newItem = ItemModel(context: self.context)
             newItem.title = textField.text!
+            newItem.done = false
             self.itemArray.append(newItem)
             
-            self.tableView.reloadData()
+            self.saveItems()
         }
         
         alert.addTextField { (alertTextField) in
@@ -99,6 +112,30 @@ extension ToDoViewController: UITableViewDelegate, UITableViewDataSource {
         }
         alert.addAction(action)
         present(alert, animated: true, completion: nil)
+    }
+    
+    
+    func saveItems() {
+        
+        do{
+            try context.save()
+        } catch {
+            print("Error saving context \(error)")
+        }
+        
+        self.tableView.reloadData()
+    }
+    
+    
+    func loadItems() {
+
+        let request : NSFetchRequest<ItemModel> = ItemModel.fetchRequest()
+        
+        do {
+            itemArray = try context.fetch(request)
+        } catch {
+            print("Error fetching data from context \(error)")
+        }
     }
     
 }

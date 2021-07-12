@@ -32,7 +32,6 @@ class ToDoTableViewCell: UITableViewCell {
             .height(19)
             .sizeToFit(.height)
             .vCenter()
-
     }
 
     private func setup() {
@@ -54,6 +53,5 @@ class ToDoTableViewCell: UITableViewCell {
         taskLabel.text = model.title
         
         self.accessoryType = model.done ? .checkmark : .none
-        
     }
 }
