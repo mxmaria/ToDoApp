@@ -11,6 +11,7 @@ import CoreData
 
 class ToDoViewController: UIViewController {
     
+    private let searchBar = UISearchBar()
     private let tableView = UITableView()
     
     var itemArray = [ItemModel]()
@@ -25,13 +26,17 @@ class ToDoViewController: UIViewController {
         
         loadItems()
         
+        searchBar.delegate = self
+        searchBar.barStyle = .default
+        searchBar.backgroundColor = UIColor(red: 253/255, green: 243/255, blue: 255/255, alpha: 1)
+        
         tableView.delegate = self
         tableView.dataSource = self
         tableView.separatorStyle = .none
         tableView.register(ToDoTableViewCell.self, forCellReuseIdentifier: "ToDoTableViewCell")
         tableView.backgroundColor = UIColor(red: 253/255, green: 243/255, blue: 255/255, alpha: 1)
         
-        view.addSubview(tableView)
+        [searchBar, tableView].forEach{view.addSubview($0)}
         
         let navvc = navigationController
         navvc?.navigationBar.barTintColor = UIColor(red: 96/255, green: 176/255, blue: 216/255, alpha: 1)
@@ -45,7 +50,18 @@ class ToDoViewController: UIViewController {
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
         
-        tableView.pin.all()
+        searchBar.pin
+            .top(view.pin.safeArea)
+            .left()
+            .right()
+            .height(50)
+
+        tableView.pin
+            .below(of: searchBar)
+            .marginVertical(0)
+            .left()
+            .right()
+            .bottom()
     }
 }
 
@@ -127,16 +143,41 @@ extension ToDoViewController: UITableViewDelegate, UITableViewDataSource {
     }
     
     
-    func loadItems() {
-
-        let request : NSFetchRequest<ItemModel> = ItemModel.fetchRequest()
+    func loadItems(with request: NSFetchRequest<ItemModel> = ItemModel.fetchRequest()) {
         
         do {
             itemArray = try context.fetch(request)
         } catch {
             print("Error fetching data from context \(error)")
         }
+        
+        tableView.reloadData()
     }
-    
 }
 
+
+extension ToDoViewController: UISearchBarDelegate {
+    
+    func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
+
+        let request : NSFetchRequest<ItemModel> = ItemModel.fetchRequest()
+        
+        request.predicate = NSPredicate(format: "title CONTAINS[cd] %@", searchBar.text!)
+        request.sortDescriptors = [NSSortDescriptor(key: "title", ascending: true)]
+        
+        loadItems(with: request)
+        
+        searchBar.endEditing(true)
+    }
+    
+    func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
+        
+        if searchBar.text?.count == 0 {
+            loadItems()
+            
+            DispatchQueue.main.async {
+                searchBar.resignFirstResponder()
+            }
+        }
+    }
+}
